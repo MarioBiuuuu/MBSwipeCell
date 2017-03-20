@@ -19,6 +19,7 @@
     CGPoint _beginPoint;
     CGPoint _lastMovePoint;
     BOOL _isMoveToLeft;
+    BOOL _lockMoveRight;
 }
 
 @property (nonatomic, weak) UIView *containerView; //容器view
@@ -151,9 +152,14 @@
     _lastMovePoint = CGPointMake(0, 0);
     _beginPoint = [touch locationInView:self.contentView];
     _isMoveToLeft = NO;
+    _lockMoveRight = NO;
 }
 
 - (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    if (_lockMoveRight) {
+        self.contentView.center = CGPointMake(self.center.x + 20, self.contentView.center.y);
+        return;
+    }
     UITouch *touch = [touches anyObject];
     CGPoint point = [touch locationInView:self.contentView];
     _isMoveToLeft = (point.x - _lastMovePoint.x) > 0;
@@ -162,16 +168,18 @@
     CGFloat pointChangeX = _beginPoint.x - point.x;
     CGFloat contentViewX = self.contentView.center.x - pointChangeX;
     self.containerView.frame = CGRectMake(self.containerView.frame.origin.x - pointChangeX, 0, _menuWidth, CGRectGetHeight(self.contentView.bounds));
-//    if (!self.isOpenLeft && !_isMoveToLeft && contentViewX >= self.center.x + 20) {
-//        _lastMovePoint = CGPointMake(0, 0);
-//        _beginPoint = [touch locationInView:self.contentView];
-//        _isMoveToLeft = NO;
-//        self.isOpenLeft = NO;
-//        self.contentView.center = CGPointMake(self.center.x, self.contentView.center.y);
-//        return;
-//    } else {
+    if (!self.isOpenLeft && !_isMoveToLeft && contentViewX >= self.center.x + 20) {
+        _lockMoveRight = YES;
+        _lastMovePoint = CGPointMake(0, 0);
+        _beginPoint = [touch locationInView:self.contentView];
+        _isMoveToLeft = NO;
+        self.isOpenLeft = NO;
+        
+        self.contentView.center = CGPointMake(self.center.x, self.contentView.center.y);
+        return;
+    } else {
         self.contentView.center = CGPointMake(contentViewX, self.contentView.center.y);
-//    }
+    }
     NSLog(@"%@", @(_beginPoint.x - point.x));
 }
 
