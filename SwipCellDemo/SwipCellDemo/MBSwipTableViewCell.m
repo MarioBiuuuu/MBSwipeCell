@@ -167,7 +167,12 @@
     
     CGFloat pointChangeX = _beginPoint.x - point.x;
     CGFloat contentViewX = self.contentView.center.x - pointChangeX;
-    self.containerView.frame = CGRectMake(self.containerView.frame.origin.x - pointChangeX, 0, _menuWidth, CGRectGetHeight(self.contentView.bounds));
+    
+    CGFloat containerViewX = self.containerView.frame.origin.x - pointChangeX;
+    if (containerViewX <= (self.contentView.frame.size.width - _menuWidth)) {
+        containerViewX = self.contentView.frame.size.width - _menuWidth;
+    }
+    self.containerView.frame = CGRectMake(containerViewX, 0, _menuWidth, CGRectGetHeight(self.contentView.bounds));
     if (!self.isOpenLeft && !_isMoveToLeft && contentViewX >= self.center.x + 20) {
         _lockMoveRight = YES;
         _lastMovePoint = CGPointMake(0, 0);

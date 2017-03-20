@@ -20,14 +20,18 @@
 @implementation UIButton (CenterImageAndTitle)
 
 - (void)centerImageAndTitle:(CGFloat)spacing {
-    CGSize imageSize = self.imageView.frame.size;
-    CGSize titleSize = self.titleLabel.frame.size;
+//    CGSize imageSize = self.imageView.image.size;
+//    CGSize titleSize = self.titleLabel.frame.size;
+//    
+//    CGFloat totalHeight = (imageSize.height + titleSize.height + spacing);
+//    
+//    self.imageEdgeInsets = UIEdgeInsetsMake(- (totalHeight - imageSize.height), 0.0, 0.0, - titleSize.width);
+//    
+//    self.titleEdgeInsets = UIEdgeInsetsMake(0.0, - imageSize.width, - (totalHeight - titleSize.height), 0.0);
     
-    CGFloat totalHeight = (imageSize.height + titleSize.height + spacing);
-    
-    self.imageEdgeInsets = UIEdgeInsetsMake(- (totalHeight - imageSize.height), 0.0, 0.0, - titleSize.width);
-    
-    self.titleEdgeInsets = UIEdgeInsetsMake(0.0, - imageSize.width, - (totalHeight - titleSize.height), 0.0);
+    self.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;//使图片和文字水平居中显示
+    [self setTitleEdgeInsets:UIEdgeInsetsMake(self.imageView.image.size.height + 10, -self.imageView.image.size.width + 5, 0.0,0.0)];//文字距离上边框的距离增加imageView的高度，距离左边框减少imageView的宽度，距离下边框和右边框距离不变
+    [self setImageEdgeInsets:UIEdgeInsetsMake(-spacing - 10, 0.0, 0.0, -self.titleLabel.bounds.size.width)];//图片距离右边框距离减少图片的宽度，其它不边
 }
 
 - (void)centerImageAndTitle {
@@ -107,7 +111,7 @@
                 [self setTitle:item.itemTitle forState:UIControlStateNormal];
                 [self setImage:item.normalImage forState:UIControlStateNormal];
                 [self setImage:item.selectedImage forState:UIControlStateSelected];
-                [self centerImageAndTitle:5];
+                [self centerImageAndTitle:0];
             }
         }
             break;

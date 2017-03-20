@@ -9,7 +9,10 @@
 #import "ViewController.h"
 #import "MBSwipTableViewCell.h"
 
-@interface ViewController () <UITableViewDelegate, UITableViewDataSource>
+@interface ViewController () <UITableViewDelegate, UITableViewDataSource> {
+    CGFloat _height;
+    UITableView *_tableView;
+}
 
 @end
 
@@ -17,22 +20,32 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    _height = 60;
     UITableView *tableView = [[UITableView alloc] initWithFrame:self.view.frame style:UITableViewStyleGrouped];
     tableView.delegate = self;
     tableView.dataSource = self;
     [self.view addSubview:tableView];
+    _tableView = tableView;
     
+    UIButton *btn = [[UIButton alloc] initWithFrame:CGRectMake(100, 100, 100, 100)];
+    [btn setBackgroundColor:[UIColor orangeColor]];
+    [btn addTarget:self action:@selector(btnClick) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:btn];
 //    [tableView registerClass:[MBSwipTableViewCell class] forCellReuseIdentifier:@"CellIdentifier"];
 //    [tableView registerNib:[UINib nibWithNibName:@"MBSwipTableViewCell" bundle:nil] forCellReuseIdentifier:@"CellIdentifier"];
 }
 
+- (void)btnClick {
+    _height += 20;
+    [_tableView reloadData];
+}
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
     return 3;
 }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
-    return 60;
+    return _height;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -57,7 +70,7 @@
     
     item.style = MBSwipCellItemStyleOnlyTitle;
     [item clickItem:^(MBSwipCellMenuItem *item) {
-        NSLog(@"click %@", item);
+        NSLog(@"click 0 %@", item);
 
     }];
     
@@ -74,11 +87,28 @@
     
     item1.style = MBSwipCellItemStyleOnlyImage;
     [item1 clickItem:^(MBSwipCellMenuItem *item) {
-        NSLog(@"click %@", item);
+        NSLog(@"click 1 %@", item);
         
     }];
     
-    [cell addMenuItems:@[item, item1]];
+    MBSwipCellMenuItem *item2 = [[MBSwipCellMenuItem alloc] init];
+    item2.normalImage = [UIImage imageNamed:@"2"];
+    item2.selectedImage = [UIImage imageNamed:@"1"];
+    
+    item2.itemTitle = @"哈哈";
+    item2.titleColor = [UIColor whiteColor];
+    
+    item2.titleFont = [UIFont systemFontOfSize:12.f];
+    item2.itemWidth = 60;
+    item2.itemBackgroundColor = [UIColor blackColor];
+    
+    item2.style = MBSwipCellItemStyleCenter;
+    [item2 clickItem:^(MBSwipCellMenuItem *item) {
+        NSLog(@"click 2 %@", item);
+        
+    }];
+    
+    [cell addMenuItems:@[item, item1, item2]];
     
     
     return cell;
