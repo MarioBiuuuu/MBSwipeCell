@@ -114,6 +114,10 @@
     return cell;
 }
 
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    NSLog(@"did select row");
+}
+
 - (BOOL)mb_menuCell:(MBSwipTableViewCell *)whcCell didPullCell:(NSInteger)index {
     NSLog(@"hehe  %@", @(index));
     return YES;

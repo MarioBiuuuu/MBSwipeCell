@@ -26,7 +26,7 @@
 
 @property (nonatomic, assign) BOOL isOpenLeft; //是否已经打开左滑动
 
-@property (nonatomic, weak) UISwipeGestureRecognizer *rightSwipe; //向右清扫手势
+@property (nonatomic, weak) UIPanGestureRecognizer *rightPanGesture; //向右清扫手势
 
 @property (nonatomic, strong) NSMutableArray<MBSwipCellMenuItem *> *menuArrM;
 
@@ -43,19 +43,9 @@
 
 - (void)layoutSubviews{
     [super layoutSubviews];
-//    CGFloat itemX = self.contentView.frame.size.width;
     CGFloat itemX = 0;
     if (self.menuArrM.count > 0) {
-//        for (NSInteger i = (self.menuArrM.count - 1); i>=0; i--) {
-//            
-//            MBSwipCellMenuItem *item = self.menuArrM[i];
-//            UIButton *btn = self.menuButtons[i];
-//            itemX = itemX - item.itemWidth;
-//
-//            btn.frame = CGRectMake(itemX, 0, item.itemWidth, self.contentView.frame.size.height);
-//            _menuWidth += item.itemWidth;
-//        }
-        
+
         for (int i = 0; i < self.menuArrM.count; i++) {
             MBSwipCellMenuItem *item = self.menuArrM[i];
             UIButton *btn = self.menuButtons[i];
@@ -67,9 +57,7 @@
         }
     }
     
-    
     self.containerView.frame = CGRectMake(CGRectGetWidth(self.contentView.bounds), 0, _menuWidth, CGRectGetHeight(self.contentView.bounds));
-//    self.showLbl.frame = CGRectMake(0, 0, SCREENWIDTH, CELLHEIGHT - 1);
 }
 
 #pragma mark - 事件操作
@@ -90,16 +78,6 @@
     [self initialMenuView];
 }
 
-
-- (void)updateMenuView:(MBSwipCellMenuItem *)item {
-    [self.menuArrM addObject:item];
-    UIButton *btn = [UIButton buttonWithItem:item];
-    btn.tag = kMENUBUTTON_TAG + self.menuButtons.count;
-    [self.containerView addSubview:btn];
-    [self.menuButtons addObject:btn];
-    [btn addTarget:self action:@selector(menuBtnClick:) forControlEvents:UIControlEventTouchUpInside];
-}
-
 - (void)initialMenuView {
     self.contentView.backgroundColor = [UIColor redColor];
 
@@ -117,6 +95,10 @@
         [self.menuButtons addObject:btn];
         [btn addTarget:self action:@selector(menuBtnClick:) forControlEvents:UIControlEventTouchUpInside];
     }
+
+    UIPanGestureRecognizer *rightPan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(pan:)];
+    [self.contentView addGestureRecognizer:rightPan];
+    self.rightPanGesture = rightPan;
     
     self.selectionStyle = UITableViewCellSelectionStyleNone; //设置单元格选中样式
     
@@ -134,112 +116,91 @@
     }
 }
 
-- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    for (UIView* next = [self superview]; next; next = next.superview) {
-        UIResponder *nextResponder = [next nextResponder];
-        if ([nextResponder isKindOfClass:[UITableView class]]) {
-            NSArray *cells = [(UITableView *)nextResponder visibleCells];
-            for (MBSwipTableViewCell *cell in cells) {
-                if ([cell isEqual:self]) {
-                    continue;
+- (void)pan:(UIPanGestureRecognizer *)pan {
+    switch (pan.state) {
+        case UIGestureRecognizerStateBegan:
+        {
+            for (UIView* next = [self superview]; next; next = next.superview) {
+                UIResponder *nextResponder = [next nextResponder];
+                if ([nextResponder isKindOfClass:[UITableView class]]) {
+                    NSArray *cells = [(UITableView *)nextResponder visibleCells];
+                    for (MBSwipTableViewCell *cell in cells) {
+                        if ([cell isEqual:self]) {
+                            continue;
+                        }
+                        [cell closeLeftSwipe];
+                    }
+                    break;
                 }
-                [cell closeLeftSwipe];
             }
-            break;
+
+            _lastMovePoint = CGPointMake(0, 0);
+            _beginPoint = [pan locationInView:self.contentView];
+            _isMoveToLeft = NO;
+            _lockMoveRight = NO;
         }
-    }
-    UITouch *touch=[touches anyObject];
-    _lastMovePoint = CGPointMake(0, 0);
-    _beginPoint = [touch locationInView:self.contentView];
-    _isMoveToLeft = NO;
-    _lockMoveRight = NO;
-}
+            break;
+        case UIGestureRecognizerStateChanged:
+        {
+            if (_lockMoveRight) {
+                self.contentView.center = CGPointMake(self.center.x + 20, self.contentView.center.y);
+                return;
+            }
+            CGPoint point = [pan locationInView:self.contentView];
+            _isMoveToLeft = (point.x - _lastMovePoint.x) > 0;
+            _lastMovePoint = point;
+            
+            CGFloat pointChangeX = _beginPoint.x - point.x;
+            CGFloat contentViewX = self.contentView.center.x - pointChangeX;
+            
+            CGFloat containerViewX = self.containerView.frame.origin.x - pointChangeX;
+            if (containerViewX <= (self.contentView.frame.size.width - _menuWidth)) {
+                containerViewX = self.contentView.frame.size.width - _menuWidth;
+            }
+            self.containerView.frame = CGRectMake(containerViewX, 0, _menuWidth, CGRectGetHeight(self.contentView.bounds));
+            if (!self.isOpenLeft && !_isMoveToLeft && contentViewX >= self.center.x + 20) {
+                _lockMoveRight = YES;
+                _lastMovePoint = CGPointMake(0, 0);
+                _beginPoint = [pan locationInView:self.contentView];
+                _isMoveToLeft = NO;
+                self.isOpenLeft = NO;
+                return;
+            } else {
+                self.contentView.center = CGPointMake(contentViewX, self.contentView.center.y);
+            }
+            NSLog(@"%@", @(_beginPoint.x - point.x));
+        }
+            break;
+        case UIGestureRecognizerStateCancelled:
+        case UIGestureRecognizerStateEnded:
+        case UIGestureRecognizerStateFailed:
+        {
+            if (!_isMoveToLeft) {
+                [self closeLeftSwipe];
+            }
+            if (self.contentView.center.x <= (self.center.x - _menuWidth * 0.5)) {
+                self.isOpenLeft = YES;
+ 
+                [UIView animateWithDuration:0.35 animations:^{
+                    self.contentView.center = CGPointMake(self.center.x - _menuWidth, self.contentView.bounds.size.height * 0.5);
+                    self.containerView.frame = CGRectMake(self.frame.size.width - _menuWidth, 0, _menuWidth, CGRectGetHeight(self.contentView.bounds));
+                }];
+            } else {
 
-- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    if (_lockMoveRight) {
-        self.contentView.center = CGPointMake(self.center.x + 20, self.contentView.center.y);
-        return;
-    }
-    UITouch *touch = [touches anyObject];
-    CGPoint point = [touch locationInView:self.contentView];
-    _isMoveToLeft = (point.x - _lastMovePoint.x) > 0;
-    _lastMovePoint = point;
-    
-    CGFloat pointChangeX = _beginPoint.x - point.x;
-    CGFloat contentViewX = self.contentView.center.x - pointChangeX;
-    
-    CGFloat containerViewX = self.containerView.frame.origin.x - pointChangeX;
-    if (containerViewX <= (self.contentView.frame.size.width - _menuWidth)) {
-        containerViewX = self.contentView.frame.size.width - _menuWidth;
-    }
-    self.containerView.frame = CGRectMake(containerViewX, 0, _menuWidth, CGRectGetHeight(self.contentView.bounds));
-    if (!self.isOpenLeft && !_isMoveToLeft && contentViewX >= self.center.x + 20) {
-        _lockMoveRight = YES;
-        _lastMovePoint = CGPointMake(0, 0);
-        _beginPoint = [touch locationInView:self.contentView];
-        _isMoveToLeft = NO;
-        self.isOpenLeft = NO;
-        
-        self.contentView.center = CGPointMake(self.center.x, self.contentView.center.y);
-        return;
-    } else {
-        self.contentView.center = CGPointMake(contentViewX, self.contentView.center.y);
-    }
-    NSLog(@"%@", @(_beginPoint.x - point.x));
-}
+                self.isOpenLeft = NO;
+                _isMoveToLeft = NO;
+                [UIView animateWithDuration:0.35 animations:^{
+                    self.contentView.center = CGPointMake(self.center.x, self.contentView.bounds.size.height * 0.5);
+                    self.containerView.frame = CGRectMake(self.frame.size.width, 0, _menuWidth, CGRectGetHeight(self.contentView.bounds));
+                }];
+            }
+        }
+            break;
 
-- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    NSLog(@"---------1");
-    if (!_isMoveToLeft) {
-        [self closeLeftSwipe];
+        default:
+            break;
     }
-    if (self.contentView.center.x <= (self.center.x - _menuWidth * 0.5)) {
-        self.isOpenLeft = YES;
-//        [UIView animateWithDuration:0.5 delay:0 usingSpringWithDamping:0.5 initialSpringVelocity:0.5 options:0 animations:^{
-//            self.contentView.center = CGPointMake(self.center.x - _menuWidth, self.contentView.bounds.size.height * 0.5);
-//        } completion:nil];
-        [UIView animateWithDuration:0.35 animations:^{
-            self.contentView.center = CGPointMake(self.center.x - _menuWidth, self.contentView.bounds.size.height * 0.5);
-            self.containerView.frame = CGRectMake(self.frame.size.width - _menuWidth, 0, _menuWidth, CGRectGetHeight(self.contentView.bounds));
-        }];
-    } else {
-//        [UIView animateWithDuration:0.5 delay:0 usingSpringWithDamping:0.5 initialSpringVelocity:0.5 options:0 animations:^{
-//            self.contentView.center = CGPointMake(self.center.x, self.contentView.bounds.size.height * 0.5);
-//        } completion:nil];
-        self.isOpenLeft = NO;
-        _isMoveToLeft = NO;
-        [UIView animateWithDuration:0.35 animations:^{
-            self.contentView.center = CGPointMake(self.center.x, self.contentView.bounds.size.height * 0.5);
-            self.containerView.frame = CGRectMake(self.frame.size.width, 0, _menuWidth, CGRectGetHeight(self.contentView.bounds));
-        }];
-    }
-}
 
-- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    NSLog(@"---------2");
-    if (!_isMoveToLeft) {
-        [self closeLeftSwipe];
-    }
-    if (self.contentView.center.x <= (self.center.x - _menuWidth * 0.5)) {
-        self.isOpenLeft = YES;
-//        [UIView animateWithDuration:0.5 delay:0 usingSpringWithDamping:0.5 initialSpringVelocity:0.5 options:0 animations:^{
-//            self.contentView.center = CGPointMake(self.center.x - _menuWidth, self.contentView.bounds.size.height * 0.5);
-//        } completion:nil];
-        [UIView animateWithDuration:0.35 animations:^{
-            self.contentView.center = CGPointMake(self.center.x - _menuWidth, self.contentView.bounds.size.height * 0.5);
-            self.containerView.frame = CGRectMake(self.frame.size.width - _menuWidth, 0, _menuWidth, CGRectGetHeight(self.contentView.bounds));
-        }];
-    } else {
-//        [UIView animateWithDuration:0.5 delay:0 usingSpringWithDamping:0.5 initialSpringVelocity:0.5 options:0 animations:^{
-//            self.contentView.center = CGPointMake(self.center.x, self.contentView.bounds.size.height * 0.5);
-//        } completion:nil];
-        self.isOpenLeft = NO;
-        _isMoveToLeft = NO;
-        [UIView animateWithDuration:0.35 animations:^{
-            self.contentView.center = CGPointMake(self.center.x, self.contentView.bounds.size.height * 0.5);
-            self.containerView.frame = CGRectMake(self.frame.size.width, 0, _menuWidth, CGRectGetHeight(self.contentView.bounds));
-        }];
-    }
 }
 
 - (void)setSelected:(BOOL)selected animated:(BOOL)animated {
