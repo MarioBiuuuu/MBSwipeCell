@@ -67,8 +67,9 @@
     if (!self.isOpenLeft) return; //还未打开左滑，不需要执行右滑
     
     [UIView animateWithDuration: 0.5 delay:0 usingSpringWithDamping:0.5 initialSpringVelocity:0.5 options:0 animations:^{
-        // 放大
         self.contentView.center = CGPointMake(SCREENWIDTH * 0.5, self.contentView.bounds.size.height * 0.5);
+        self.containerView.frame = CGRectMake(self.frame.size.width, 0, _menuWidth, CGRectGetHeight(self.contentView.bounds));
+
     } completion:nil];
     self.isOpenLeft = NO;
 }
